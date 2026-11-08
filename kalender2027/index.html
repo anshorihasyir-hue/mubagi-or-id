@@ -253,6 +253,9 @@ var totalHargaEl = document.getElementById('totalHarga');
 var HARGA = 60000;
 var KODE_UNIK = 27;
 
+// URL Web App Google Apps Script resmi Yayasan Mubagi
+var GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhmEsxhj-2YhDeGsul6Ka7mogH8v0QYfiCXIP3t4RN0T3HeCFK9ilzOUOPXGiRJbiw/exec';
+
 // Fungsi Hitung Total
 function hitungTotal() {
   var qG = parseInt(qtyGantung.value) || 0;
@@ -267,7 +270,7 @@ function hitungTotal() {
 qtyGantung.addEventListener('input', hitungTotal);
 qtyDuduk.addEventListener('input', hitungTotal);
 
-// Submit Form & Langsung ke WhatsApp (Aman Safari)
+// Submit Form, Kirim Data ke Google Spreadsheet & Buka WA
 var kalenderForm = document.getElementById('kalenderForm');
 var submitBtn = document.getElementById('submitBtn');
 var statusMsg = document.getElementById('statusMsg');
@@ -288,9 +291,30 @@ kalenderForm.addEventListener('submit', function(e) {
   var whatsapp = document.getElementById('whatsapp').value.trim();
 
   submitBtn.disabled = true;
-  submitBtn.innerText = 'Membuka WhatsApp...';
+  submitBtn.innerText = 'Menyimpan & Memproses...';
+  statusMsg.className = "status-msg ok";
+  statusMsg.innerHTML = "Menyimpan data pesanan dan mengarahkan ke WhatsApp...";
 
-  // Format Pesan WhatsApp
+  // 1. Data dikirim ke Google Spreadsheet via Apps Script Web App
+  var payload = {
+    nama: nama,
+    whatsapp: whatsapp,
+    qtyGantung: qG,
+    qtyDuduk: qD,
+    totalHarga: total,
+    tanggal: new Date().toLocaleString('id-ID')
+  };
+
+  fetch(GOOGLE_SCRIPT_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).catch(function(err) {
+    console.error('Spreadsheet Error:', err);
+  });
+
+  // 2. Format Teks Pesan WhatsApp
   var pesanWA = "Assalamu'alaikum, saya ingin konfirmasi pemesanan kalender:\n\n" +
               "• Nama: " + nama + "\n" +
               "• No. WA: " + whatsapp + "\n" +
@@ -301,17 +325,10 @@ kalenderForm.addEventListener('submit', function(e) {
 
   var waUrl = "https://wa.me/6289685120847?text=" + encodeURIComponent(pesanWA);
 
-  statusMsg.className = "status-msg ok";
-  statusMsg.innerHTML = "Mengarahkan ke aplikasi WhatsApp...";
-
-  // Menggunakan window.location.href agar lolos dari pencegah pop-up Safari
-  window.location.href = waUrl;
-
+  // 3. Dialihkan ke WhatsApp (window.location.href aman dari Safari Pop-up Blocker)
   setTimeout(function() {
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = '<i class="fa-brands fa-whatsapp" style="font-size:1.2rem;"></i> Kirim Bukti Pembayaran & Konfirmasi Pemesanan';
-    statusMsg.style.display = 'none';
-  }, 2000);
+    window.location.href = waUrl;
+  }, 400);
 });
 
 // Tahun otomatis di footer
